@@ -4,19 +4,19 @@ const PDFDocument = require("pdfkit");
 const axios = require("axios");
 
 const app = express();
-const PORT = process.env.PORT || 8080;
-
 app.use(cors());
 app.use(express.json());
 
-app.get("/", (req, res) => {
-  res.send("Badge Print API running.");
-});
+app.get("/", (req, res) => res.send("Badge Print API running."));
 
 app.post("/print-badge", async (req, res) => {
-  const { firstName, lastName, ticketNumber } = req.body;
+  const { firstName, lastName, ticketNumber, printerId } = req.body;
 
-  // 1. Generate PDF
+  if (!firstName || !lastName || !ticketNumber || !printerId) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  // 1. Generate badge PDF in memory
   const doc = new PDFDocument({ size: "A7", margin: 10 });
   let bufs = [];
   doc.fontSize(24).text(`${firstName} ${lastName}`, { align: "center" });
@@ -29,7 +29,7 @@ app.post("/print-badge", async (req, res) => {
   // 2. Send to PrintNode
   try {
     const printJob = {
-      printerId: parseInt(process.env.PRINTER_ID),
+      printerId: printerId,
       title: `Badge for ${firstName} ${lastName}`,
       contentType: "pdf_base64",
       content: pdfBuffer.toString("base64"),
@@ -46,7 +46,6 @@ app.post("/print-badge", async (req, res) => {
         }
       }
     );
-
     res.status(200).json({ success: true, printJobId: response.data.id });
   } catch (e) {
     console.error(e?.response?.data || e.message);
@@ -54,6 +53,5 @@ app.post("/print-badge", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on ${PORT}`);
-});
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => console.log("Server running on", PORT));
