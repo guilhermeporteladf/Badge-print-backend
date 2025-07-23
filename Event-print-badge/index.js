@@ -33,14 +33,14 @@ app.post("/print-badge", async (req, res) => {
       .fontSize(120)
       .font("Helvetica-Bold")
       .fillColor("black")
-      .text(`${firstName} ${lastName}`, 0, 200, {
+      .text(`${firstName} ${lastName}`, 0, 50, {
         width: 1200,
         align: "center",
       });
 
     // Optionally, add ticket number at the bottom
     doc
-      .fontSize(50)
+      .fontSize(0)
       .font("Helvetica-Bold")
       .fillColor("#333")
       .text(`Ticket: ${ticketNumber}`, 0, 350, {
