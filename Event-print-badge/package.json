@@ -1,8 +1,8 @@
 {
   "name": "print-badge-backend",
   "version": "1.0.0",
-  "description": "API backend to generate and print event badges via PrintNode",
   "main": "index.js",
+  "type": "commonjs",
   "scripts": {
     "start": "node index.js"
   },
