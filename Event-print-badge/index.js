@@ -2,44 +2,63 @@ const express = require("express");
 const cors = require("cors");
 const PDFDocument = require("pdfkit");
 const axios = require("axios");
+const path = require("path");
+
 const app = express();
+const PORT = process.env.PORT || 3000;
 
-app.use(cors({
-  origin: "*", // In production, use your frontend URL instead of *
-  methods: ["GET", "POST", "OPTIONS"],
-}));
-
+app.use(cors());
 app.use(express.json());
 
-// Root route for testing
-app.get("/", (req, res) => {
-  res.send("Badge Print API running.");
-});
-
 app.post("/print-badge", async (req, res) => {
-  const { firstName, lastName, ticketNumber, printerId } = req.body;
-  if (!firstName || !lastName || !ticketNumber || !printerId) {
-    return res.status(400).json({ error: "Missing required fields" });
-  }
-
-  // 1. Generate PDF
-  const doc = new PDFDocument({ size: "A7", margin: 10 });
-  let bufs = [];
-  doc.fontSize(24).text(`${firstName} ${lastName}`, { align: "center" });
-  doc.moveDown();
-  doc.fontSize(18).text(`Ticket: ${ticketNumber}`, { align: "center" });
-  doc.end();
-  for await (const d of doc) bufs.push(d);
-  const pdfBuffer = Buffer.concat(bufs);
-
-  // 2. Send to PrintNode
   try {
+    const { firstName, lastName, ticketNumber, printerId } = req.body;
+    if (!firstName || !lastName || !ticketNumber || !printerId) {
+      return res.status(400).json({ error: "Missing fields" });
+    }
+
+    // 1. Generate PDF with template
+    const doc = new PDFDocument({
+      size: [1200, 450], // Set to your badge PNG's pixel size (adjust as needed)
+      margin: 0,
+    });
+    let bufs = [];
+
+    // Add the template as the background image
+    const templatePath = path.join(__dirname, "assets", "Badge Front.png");
+    doc.image(templatePath, 0, 0, { width: 1200, height: 450 });
+
+    // Add attendee name (customize X/Y/size for your template)
+    doc
+      .fontSize(120)
+      .font("Helvetica-Bold")
+      .fillColor("black")
+      .text(`${firstName} ${lastName}`, 0, 200, {
+        width: 1200,
+        align: "center",
+      });
+
+    // Optionally, add ticket number at the bottom
+    doc
+      .fontSize(50)
+      .font("Helvetica-Bold")
+      .fillColor("#333")
+      .text(`Ticket: ${ticketNumber}`, 0, 350, {
+        width: 1200,
+        align: "center",
+      });
+
+    doc.end();
+    for await (const d of doc) bufs.push(d);
+    const pdfBuffer = Buffer.concat(bufs);
+
+    // 2. Send to PrintNode
     const printJob = {
-      printerId: Number(printerId),
+      printerId: parseInt(printerId),
       title: `Badge for ${firstName} ${lastName}`,
       contentType: "pdf_base64",
       content: pdfBuffer.toString("base64"),
-      source: "EventManagerWeb"
+      source: "EventManagerWeb",
     };
 
     const response = await axios.post(
@@ -47,20 +66,23 @@ app.post("/print-badge", async (req, res) => {
       printJob,
       {
         auth: {
-          username: process.env.PRINTNODE_API_KEY,
-          password: ""
-        }
+          username: process.env.PRINTNODE_API_KEY, // set in Railway env
+          password: "",
+        },
       }
     );
 
     res.status(200).json({ success: true, printJobId: response.data.id });
   } catch (e) {
     console.error(e?.response?.data || e.message);
-    res.status(500).json({ error: "Failed to send to PrintNode" });
+    res.status(500).json({ error: "Failed to print badge", details: e.message });
   }
 });
 
-const PORT = process.env.PORT || 8080;
+app.get("/", (req, res) => {
+  res.send("Badge printing backend is running!");
+});
+
 app.listen(PORT, () => {
-  console.log(`Server running on ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
