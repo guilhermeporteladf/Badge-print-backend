@@ -47,7 +47,7 @@ app.post("/print-badge", async (req, res) => {
 
     // Optionally, ticket number
     doc
-      .fontSize(50)
+      .fontSize(00)
       .font("Helvetica-Bold")
       .fillColor("#333")
       .text(`Ticket: ${ticketNumber}`, 0, 260, {
