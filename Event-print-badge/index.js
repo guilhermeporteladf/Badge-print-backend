@@ -14,7 +14,7 @@ const COMPUTER_ID = process.env.COMPUTER_ID || "670914"; // <--- CHANGE PER DEPL
 // Fill in your printer IDs for each computer here
 const COMPUTER_PRINTERS = {
   "670914": [74545334, 74545335, 74545337], // Desk 1 (LAPTOP-527PLVBB)
-  "671077": [74505369, 74545194, 74545190], // Desk 2 (DESKTOP-OET8SVD)
+  "671077": [74545189, 74545197, 74545194, 74545190, 74573362], // Desk 2 (DESKTOP-OET8SVD)
   "DESK3ID": [12345678, 12345679, 12345680], // Desk 3 (Update with real ID/printers)
   // Add more computers if needed
 };
