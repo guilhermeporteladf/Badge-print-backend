@@ -7,7 +7,7 @@ const axios = require("axios");
 
 const PORT = process.env.PORT || 8080;
 const TEMPLATE_PATH = path.join(__dirname, "assets", "Badge Front.png"); // PNG must match label aspect ratio!
-const PRINTNODE_API_KEY = process.env.PRINTNODE_API_KEY || "REPLACE_WITH_YOUR_KEY"; // <<<--- SET THIS
+const PRINTNODE_API_KEY = process.env.PRINTNODE_API_KEY || "GPsPSWkdE5rUGeaW0-Oi50Hlf2EVZbUAx_amI9AJ-Ng"; // <<<--- SET THIS
 
 const app = express();
 app.use(cors());
