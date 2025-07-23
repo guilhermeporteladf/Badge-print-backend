@@ -17,33 +17,40 @@ app.post("/print-badge", async (req, res) => {
       return res.status(400).json({ error: "Missing fields" });
     }
 
-    // 1. Generate PDF with template
+    // === 1. Generate PDF with template, LANDSCAPE ===
     const doc = new PDFDocument({
-      size: [1200, 450], // Set to your badge PNG's pixel size (adjust as needed)
+      size: [1200, 450], // 4" x 1.5" LANDSCAPE
       margin: 0,
     });
     let bufs = [];
 
-    // Add the template as the background image
+    // For debugging: draw a red border
+    doc
+      .rect(0, 0, 1200, 450)
+      .lineWidth(10)
+      .strokeColor("red")
+      .stroke();
+
+    // Add template as background image
     const templatePath = path.join(__dirname, "assets", "Badge Front.png");
     doc.image(templatePath, 0, 0, { width: 1200, height: 450 });
 
-    // Add attendee name (customize X/Y/size for your template)
+    // Add attendee name (center)
     doc
       .fontSize(120)
       .font("Helvetica-Bold")
       .fillColor("black")
-      .text(`${firstName} ${lastName}`, 0, 50, {
+      .text(`${firstName} ${lastName}`, 0, 110, {
         width: 1200,
         align: "center",
       });
 
-    // Optionally, add ticket number at the bottom
+    // Optionally, ticket number
     doc
-      .fontSize(0)
+      .fontSize(50)
       .font("Helvetica-Bold")
       .fillColor("#333")
-      .text(`Ticket: ${ticketNumber}`, 0, 350, {
+      .text(`Ticket: ${ticketNumber}`, 0, 260, {
         width: 1200,
         align: "center",
       });
@@ -52,7 +59,7 @@ app.post("/print-badge", async (req, res) => {
     for await (const d of doc) bufs.push(d);
     const pdfBuffer = Buffer.concat(bufs);
 
-    // 2. Send to PrintNode
+    // === 2. Send to PrintNode ===
     const printJob = {
       printerId: parseInt(printerId),
       title: `Badge for ${firstName} ${lastName}`,
@@ -66,7 +73,7 @@ app.post("/print-badge", async (req, res) => {
       printJob,
       {
         auth: {
-          username: process.env.PRINTNODE_API_KEY, // set in Railway env
+          username: process.env.PRINTNODE_API_KEY,
           password: "",
         },
       }
