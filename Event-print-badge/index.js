@@ -6,8 +6,8 @@ const path = require("path");
 const axios = require("axios");
 
 const PORT = process.env.PORT || 8080;
-const TEMPLATE_PATH = path.join(__dirname, "assets", "Badge Front.png"); // PNG must be 288x108 px
-const PRINTNODE_API_KEY = process.env.PRINTNODE_API_KEY || "REPLACE_WITH_YOUR_KEY"; // <<<--- SET THIS!
+const TEMPLATE_PATH = path.join(__dirname, "assets", "Badge Front.png"); // PNG must match label aspect ratio!
+const PRINTNODE_API_KEY = process.env.PRINTNODE_API_KEY || "REPLACE_WITH_YOUR_KEY"; // <<<--- SET THIS
 
 const app = express();
 app.use(cors());
@@ -24,12 +24,12 @@ app.post("/print-badge", async (req, res) => {
       lastName,
       ticketNumber,
       printerId,
-      sessions = [20, 15, 30, 40, 50], // Default for demo
+      sessions = [20, 15, 30, 40, 50],
     } = req.body;
 
-    // Create badge as PDF (landscape, 4x1.5in @ 72dpi)
-    const LABEL_WIDTH = 288;
-    const LABEL_HEIGHT = 108;
+    // Label at 4in x 1.5in, 300 DPI
+    const LABEL_WIDTH = 1200;
+    const LABEL_HEIGHT = 450;
 
     const doc = new PDFDocument({
       size: [LABEL_WIDTH, LABEL_HEIGHT],
@@ -72,35 +72,35 @@ app.post("/print-badge", async (req, res) => {
       }
     });
 
-    // Draw PNG background
+    // Draw PNG background (must be 1200x450 for perfect fit)
     doc.image(TEMPLATE_PATH, 0, 0, { width: LABEL_WIDTH, height: LABEL_HEIGHT });
 
-    // Name
+    // Name (centered)
     const fullName = `${firstName || ""} ${lastName || ""}`.trim() || "NAME NAME";
     doc.font("Helvetica-Bold")
-      .fontSize(40)
+      .fontSize(200)
       .fillColor("#000")
-      .text(fullName, 0, 18, { width: LABEL_WIDTH, align: "center" });
+      .text(fullName, 0, 60, { width: LABEL_WIDTH, align: "center" });
 
-    // Session labels
-    const sessionLabelsY = 60;
+    // Session labels and values
+    const sessionLabelsY = 300;
     doc.font("Helvetica-Bold")
-      .fontSize(16)
+      .fontSize(54)
       .fillColor("#000");
     for (let i = 0; i < 5; i++) {
-      const x = 36 + i * 48;
-      doc.text(`SESSION ${i + 1}`, x, sessionLabelsY, { width: 48, align: "center" });
+      const x = 150 + i * 180;
+      doc.text(`SESSION ${i + 1}`, x, sessionLabelsY, { width: 180, align: "center" });
     }
 
-    // Session values (underlined)
-    const sessionValuesY = 82;
+    // Session values
+    const sessionValuesY = 375;
     doc.font("Helvetica-Bold")
-      .fontSize(28)
+      .fontSize(80)
       .fillColor("#000");
     for (let i = 0; i < 5; i++) {
-      const x = 36 + i * 48;
+      const x = 150 + i * 180;
       doc.text(sessions[i] || "", x, sessionValuesY, {
-        width: 48,
+        width: 180,
         align: "center",
         underline: true,
       });
