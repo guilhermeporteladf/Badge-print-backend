@@ -1,95 +1,86 @@
 const express = require("express");
 const cors = require("cors");
 const PDFDocument = require("pdfkit");
-const axios = require("axios");
+const fs = require("fs");
 const path = require("path");
+const axios = require("axios");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-
 app.use(cors());
 app.use(express.json());
 
 app.post("/print-badge", async (req, res) => {
-  try {
-    const { firstName, lastName, ticketNumber, printerId } = req.body;
-    if (!firstName || !lastName || !ticketNumber || !printerId) {
-      return res.status(400).json({ error: "Missing fields" });
-    }
+  const { firstName, lastName, ticketNumber, printerId } = req.body;
+  if (!firstName || !lastName || !ticketNumber || !printerId) {
+    return res.status(400).json({ error: "Missing fields" });
+  }
 
-    // === 1. Generate PDF with template, LANDSCAPE ===
+  try {
+    // Set page to 4 x 1.5 inches, landscape
     const doc = new PDFDocument({
-      size: [1200, 450], // 4" x 1.5" LANDSCAPE
-      margin: 0,
+      size: [288, 108], // width x height in points
+      layout: "landscape",
+      margin: 0
     });
+
     let bufs = [];
 
-    // For debugging: draw a red border
-    doc
-      .rect(0, 0, 1200, 450)
-      .lineWidth(10)
-      .strokeColor("red")
-      .stroke();
+    // Draw template
+    doc.image(
+      path.join(__dirname, "assets", "Badge Front.png"),
+      0,
+      0,
+      { width: 288, height: 108 }
+    );
 
-    // Add template as background image
-    const templatePath = path.join(__dirname, "assets", "Badge Front.png");
-    doc.image(templatePath, 0, 0, { width: 1200, height: 450 });
-
-    // Add attendee name (center)
-    doc
-      .fontSize(120)
+    // Print name and ticket number, centered
+    doc.fontSize(28)
+      .fillColor("#000")
       .font("Helvetica-Bold")
-      .fillColor("black")
-      .text(`${firstName} ${lastName}`, 0, 110, {
-        width: 1200,
-        align: "center",
+      .text(`${firstName} ${lastName}`, 0, 40, {
+        width: 288,
+        align: "center"
       });
 
-    // Optionally, ticket number
-    doc
-      .fontSize(50)
-      .font("Helvetica-Bold")
-      .fillColor("#333")
-      .text(`Ticket: ${ticketNumber}`, 0, 260, {
-        width: 1200,
-        align: "center",
+    doc.fontSize(14)
+      .fillColor("#000")
+      .font("Helvetica")
+      .text(`Ticket: ${ticketNumber}`, 0, 75, {
+        width: 288,
+        align: "center"
       });
 
     doc.end();
+
     for await (const d of doc) bufs.push(d);
     const pdfBuffer = Buffer.concat(bufs);
 
-    // === 2. Send to PrintNode ===
-    const printJob = {
-      printerId: parseInt(printerId),
-      title: `Badge for ${firstName} ${lastName}`,
-      contentType: "pdf_base64",
-      content: pdfBuffer.toString("base64"),
-      source: "EventManagerWeb",
-    };
-
+    // Send to PrintNode
     const response = await axios.post(
       "https://api.printnode.com/printjobs",
-      printJob,
+      {
+        printerId,
+        title: `Badge for ${firstName} ${lastName}`,
+        contentType: "pdf_base64",
+        content: pdfBuffer.toString("base64"),
+        source: "EventManagerWeb"
+      },
       {
         auth: {
           username: process.env.PRINTNODE_API_KEY,
-          password: "",
-        },
+          password: ""
+        }
       }
     );
 
-    res.status(200).json({ success: true, printJobId: response.data.id });
+    res.json({ success: true, printJobId: response.data.id });
   } catch (e) {
-    console.error(e?.response?.data || e.message);
-    res.status(500).json({ error: "Failed to print badge", details: e.message });
+    console.error(e);
+    res.status(500).json({ error: "Failed to print badge" });
   }
 });
 
-app.get("/", (req, res) => {
-  res.send("Badge printing backend is running!");
-});
-
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log("Badge print backend running on port " + PORT);
 });
