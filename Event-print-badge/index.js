@@ -1,72 +1,66 @@
 const express = require("express");
+const cors = require("cors");
 const PDFDocument = require("pdfkit");
-const fs = require("fs");
-const path = require("path");
+const axios = require("axios");
+const app = express();
 
-const router = express.Router();
+app.use(cors({
+  origin: "*", // In production, use your frontend URL instead of *
+  methods: ["GET", "POST", "OPTIONS"],
+}));
 
-router.post("/print-badge", async (req, res) => {
-  const { firstName, lastName, sessions = [20, 15, 30, 40, 50] } = req.body; // sessions: array of numbers
+app.use(express.json());
 
-  // Path to your PNG template
-  const badgeTemplatePath = path.join(__dirname, "assets", "Badge Front.png");
+// Root route for testing
+app.get("/", (req, res) => {
+  res.send("Badge Print API running.");
+});
 
+app.post("/print-badge", async (req, res) => {
+  const { firstName, lastName, ticketNumber, printerId } = req.body;
+  if (!firstName || !lastName || !ticketNumber || !printerId) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  // 1. Generate PDF
+  const doc = new PDFDocument({ size: "A7", margin: 10 });
+  let bufs = [];
+  doc.fontSize(24).text(`${firstName} ${lastName}`, { align: "center" });
+  doc.moveDown();
+  doc.fontSize(18).text(`Ticket: ${ticketNumber}`, { align: "center" });
+  doc.end();
+  for await (const d of doc) bufs.push(d);
+  const pdfBuffer = Buffer.concat(bufs);
+
+  // 2. Send to PrintNode
   try {
-    // Setup PDF document
-    const doc = new PDFDocument({
-      size: [1200, 450], // px, matches your PNG
-      margin: 0,
-    });
+    const printJob = {
+      printerId: Number(printerId),
+      title: `Badge for ${firstName} ${lastName}`,
+      contentType: "pdf_base64",
+      content: pdfBuffer.toString("base64"),
+      source: "EventManagerWeb"
+    };
 
-    // Buffer for PDF output
-    let buffers = [];
-    doc.on("data", buffers.push.bind(buffers));
-    doc.on("end", () => {
-      const pdfData = Buffer.concat(buffers);
-      res.contentType("application/pdf");
-      res.send(pdfData);
-    });
+    const response = await axios.post(
+      "https://api.printnode.com/printjobs",
+      printJob,
+      {
+        auth: {
+          username: process.env.PRINTNODE_API_KEY,
+          password: ""
+        }
+      }
+    );
 
-    // Draw background template
-    doc.image(badgeTemplatePath, 0, 0, { width: 1200, height: 450 });
-
-    // Draw name in the center (tweak y for perfect alignment)
-    doc.font("Helvetica-Bold")
-      .fontSize(130)
-      .fillColor("black")
-      .text(
-        `${firstName} ${lastName}`,
-        0,
-        70, // adjust as needed
-        { align: "center", width: 1200 }
-      );
-
-    // Draw sessions (titles and values)
-    const sessionTitles = ["SESSION 1", "SESSION 2", "SESSION 3", "SESSION 4", "SESSION 5"];
-    const sessionY = 200;
-    const valueY = 320;
-    const xPositions = [160, 355, 555, 755, 955]; // tweak if needed
-
-    doc.font("Helvetica-Bold").fontSize(34);
-
-    sessionTitles.forEach((title, i) => {
-      doc.text(title, xPositions[i] - 65, sessionY, { width: 130, align: "center" });
-    });
-
-    doc.fontSize(60).font("Helvetica-Bold");
-    sessions.forEach((val, i) => {
-      doc.text(`${val}`, xPositions[i] - 65, valueY, {
-        width: 130,
-        align: "center",
-        underline: true,
-      });
-    });
-
-    doc.end();
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Failed to generate badge");
+    res.status(200).json({ success: true, printJobId: response.data.id });
+  } catch (e) {
+    console.error(e?.response?.data || e.message);
+    res.status(500).json({ error: "Failed to send to PrintNode" });
   }
 });
 
-module.exports = router;
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => {
+  console.log(`Server running on ${PORT}`);
+});
