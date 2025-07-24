@@ -12,9 +12,9 @@ const PRINTNODE_API_KEY = process.env.PRINTNODE_API_KEY || "GPsPSWkdE5rUGeaW0-Oi
 // --- For slot mapping ---
 const PRINTERS = {
   COMPUTER1: [
-    process.env.COMPUTER1_PRINTER1, // slot 0
-    process.env.COMPUTER1_PRINTER2, // slot 1
-    process.env.COMPUTER1_PRINTER3, // slot 2
+    process.env.COMPUTER1_PRINTER1,
+    process.env.COMPUTER1_PRINTER2,
+    process.env.COMPUTER1_PRINTER3,
   ],
   COMPUTER2: [
     process.env.COMPUTER2_PRINTER1,
@@ -41,14 +41,15 @@ app.post("/print-badge", async (req, res) => {
       lastName = "",
       computer,
       printerSlot = 0,
+      sessions = ["", "", ""], // Pass an array of 3 session strings
     } = req.body;
 
-    // --- PDF LABEL: 4in x 1.5in portrait ---
-    const LABEL_WIDTH = 288; // 4in
-    const LABEL_HEIGHT = 108; // 1.5in
+    // PDF LABEL: 4in x 1.5in portrait
+    const LABEL_WIDTH = 288;
+    const LABEL_HEIGHT = 108;
 
     const doc = new PDFDocument({
-      size: [LABEL_WIDTH, LABEL_HEIGHT], // [width, height]
+      size: [LABEL_WIDTH, LABEL_HEIGHT],
       layout: "portrait",
       margin: 0,
     });
@@ -58,7 +59,6 @@ app.post("/print-badge", async (req, res) => {
     doc.on("end", async () => {
       const pdfBuffer = Buffer.concat(buffers);
 
-      // Pick printerId from PRINTERS map
       const printerList = PRINTERS[computer] || [];
       const printerId = printerList[printerSlot];
       if (!printerId) {
@@ -90,17 +90,31 @@ app.post("/print-badge", async (req, res) => {
       }
     });
 
-    // --- Draw PNG background if needed ---
+    // Draw PNG background if needed
     if (fs.existsSync(TEMPLATE_PATH)) {
       doc.image(TEMPLATE_PATH, 0, 0, { width: LABEL_WIDTH, height: LABEL_HEIGHT });
     }
 
-    // --- Print Name centered ---
+    // Name (top, centered)
     const fullName = `${firstName} ${lastName}`.trim() || "NAME NAME";
     doc.font("Helvetica-Bold")
       .fontSize(28)
       .fillColor("#000")
-      .text(fullName, 0, 25, { width: LABEL_WIDTH, align: "center" });
+      .text(fullName, 0, 12, { width: LABEL_WIDTH, align: "center" });
+
+    // Sessions: 3 rows, centered under name
+    doc.font("Helvetica")
+      .fontSize(17)
+      .fillColor("#222");
+
+    // Calculate base Y so all 3 sessions are nicely spaced below the name
+    let sessionBaseY = 45;
+    for (let i = 0; i < 3; i++) {
+      doc.text(sessions[i] || "", 0, sessionBaseY + i * 21, {
+        width: LABEL_WIDTH,
+        align: "center",
+      });
+    }
 
     doc.end();
   } catch (error) {
