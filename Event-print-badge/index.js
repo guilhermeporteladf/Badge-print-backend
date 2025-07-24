@@ -104,7 +104,7 @@ app.post("/print-badge", async (req, res) => {
 
     // Sessions: 3 rows, centered under name
     doc.font("Helvetica")
-      .fontSize(17)
+      .fontSize(10)
       .fillColor("#222");
 
     // Calculate base Y so all 3 sessions are nicely spaced below the name
