@@ -12,8 +12,8 @@ const LABEL_HEIGHT_IN = 1.5;
 const LABEL_WIDTH_PT = LABEL_WIDTH_IN * INCH_TO_PT;      // 288pt
 const LABEL_HEIGHT_PT = LABEL_HEIGHT_IN * INCH_TO_PT;    // 108pt
 
-// PrintNode API key
-const PRINTNODE_API_KEY = process.env.PRINTNODE_API_KEY || "YOUR_API_KEY_HERE";
+// PrintNode API key (hardcoded for testing)
+const PRINTNODE_API_KEY = "GPsPSWkdE5rUGeaW0-Oi50Hlf2EVZbUAx_amI9AJ-Ng";
 
 const app = express();
 app.use(cors());
