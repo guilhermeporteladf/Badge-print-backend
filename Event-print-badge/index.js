@@ -35,8 +35,8 @@ app.post("/print-badge", async (req, res) => {
     } = req.body;
 
     // 4x1.5in @ 300dpi = 1200 x 450 pixels
-    const LABEL_WIDTH = 1200;
-    const LABEL_HEIGHT = 450;
+    const LABEL_WIDTH = 450;
+    const LABEL_HEIGHT = 1200;
 
     // Generate PDF
     const doc = new PDFDocument({
