@@ -86,8 +86,8 @@ app.post("/print-badge", async (req, res) => {
     }
 
     // ---- Generate simple PDF ----
-    const LABEL_WIDTH = 432; // 4 inches at 108 dpi (or 1200 for 300dpi if your label is 1200x450px)
-    const LABEL_HEIGHT = 162; // 1.5 inches at 108 dpi
+    const LABEL_WIDTH = 1200; // 4 inches at 108 dpi (or 1200 for 300dpi if your label is 1200x450px)
+    const LABEL_HEIGHT = 450; // 1.5 inches at 108 dpi
 
     const doc = new PDFDocument({
       size: [LABEL_WIDTH, LABEL_HEIGHT],
